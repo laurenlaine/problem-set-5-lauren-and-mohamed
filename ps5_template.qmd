@@ -171,9 +171,145 @@ df.head()
 
 * b. Create Dynamic Scraper (PARTNER 2)
 
+
 ```{python}
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+```
+
+```{python}
+def check_input(year):
+    if year < 2013:
+        print("Please enter a year >= 2013, as only enforcement actions after 2013 are available.")
+        return False
+    return True
 
 ```
+
+```{python}
+def initialize_data_containers():
+  return [], [], [], []
+```
+
+```{python}
+def get_today_date():
+    now = datetime.now()
+    return now.year, now.month
+```
+
+```{python}
+def get_page_content(url):
+    response = requests.get(url)
+    return BeautifulSoup(response.text, 'lxml')
+```
+
+```{python}
+def get_titles(soup):
+    titles = []
+    headings = soup.find_all('h2', class_='usa-card__heading')
+    for tag in headings:
+        titles.append(tag.find('a').text)
+    return titles
+```
+
+```{python}
+def get_dates(soup):
+    dates = []
+    date_tags = soup.find_all('span', class_='text-base-dark padding-right-105')
+    for tag in date_tags:
+        dates.append(tag.text)
+    return dates
+```
+
+```{python}
+def get_categories(soup):
+    categories = []
+    category_tags = soup.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
+    for tag in category_tags:
+        categories.append(tag.text)
+    return categories
+```
+
+```{python}
+def get_links(soup):
+    full_links = []
+    link_tags = [tag.find('a').attrs for tag in soup.find_all('h2', class_='usa-card__heading')]
+    prefix = 'https://oig.hhs.gov/'
+    for link in link_tags:
+        full_links.append(prefix + link.get('href'))
+    return full_links
+```
+
+```{python}
+def making_dataframe(titles, dates, categories, links):
+    return pd.DataFrame({
+        'Title': titles,
+        'Date': dates,
+        'Category': categories,
+        'Link': links
+    })
+```
+
+```{python}
+def save_to_csv(df, start_year, start_month):
+    filename = f"enforcement_actions_{start_year}_{start_month:02d}.csv"
+    df.to_csv(filename, index=False)
+    print(f"Data saved to {filename}")
+```
+
+```{python}
+def showing_summary(df):
+    print(f"Number of enforcement actions: {len(df)}")
+    if not df.empty:
+        earliest_date = df['Date'].min()
+        earliest_action = df[df['Date'] == earliest_date].iloc[0]
+        print(f"Earliest enforcement action Date - {earliest_action['Date']}, Title - {earliest_action['Title']}")
+```
+
+```{python}
+def scrape_enforcement_actions(start_year, start_month):
+    if not check_input(start_year):
+        return
+
+    titles, dates, categories, full_links = initialize_data_containers()
+    url = 'https://oig.hhs.gov/fraud/enforcement/'
+    current_year, current_month = get_today_date()
+    
+    visited_urls = []
+
+    year, month = start_year, start_month
+    while (year < current_year) or (year == current_year and month <= current_month):
+
+        if url in visited_urls:
+            print("Stopped because ended up in a loop.")
+            break
+        soup = get_page_content(url)
+        
+        titles.extend(get_titles(soup))
+        dates.extend(get_dates(soup))
+        categories.extend(get_categories(soup))
+        full_links.extend(get_links(soup))
+        
+        time.sleep(2)
+        
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    
+    df = making_dataframe(titles, dates, categories, full_links)
+    save_to_csv(df, start_year, start_month)
+    showing_summary(df)
+    
+    return df
+```
+
+```{python}
+# Running scraper starting from January 2023
+df = scrape_enforcement_actions(2023, 1)
+```
+
 
 * c. Test Partner's Code (PARTNER 1)
 
