@@ -124,11 +124,42 @@ print(full_links)
 df=pd.DataFrame({'Title':a_tags, 'Date':dates, 'Category':category, 'Link':full_links})
 
 df.head()
+len(df)
 ```
 ### 2. Crawling (PARTNER 1)
-
 ```{python}
-
+url = 'https://oig.hhs.gov/fraud/enforcement/washington-doctor-settles-allegations-he-submitted-false-claims-to-federal-health-care-programs/'
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'lxml')
+ul_tag=soup.find('ul', class_="usa-list usa-list--unstyled margin-y-2")
+li_list=ul_tag.find_all('li')
+print(li_list)
+print(li_list[1])
+#used ChatGPT to figure out how to remove the span tag. 
+# Prompt remove span tag and content with Beautiful Soup in Python 
+span_tag = li_list[1].find('span', class_='padding-right-2 text-base')
+if span_tag:
+    span_tag.decompose()
+print(li_list[1].text)
+```
+```{python}
+agencies=[]
+for i in range(min(20, len(full_links))):
+  url = full_links[i]
+  response = requests.get(url)
+  soup = BeautifulSoup(response.text, 'lxml')
+  ul_tag=soup.find('ul', class_="usa-list usa-list--unstyled margin-y-2")
+  li_list=ul_tag.find_all('li')
+  span_tag = li_list[1].find('span', class_='padding-right-2 text-base')
+  if span_tag:
+    span_tag.decompose()
+  agency=(li_list[1].text)
+  print(agency)
+  agencies.append(agency)
+```
+```{python}
+df['Agency']=agencies
+df.head()
 ```
 
 ## Step 2: Making the scraper dynamic
