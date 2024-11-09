@@ -144,7 +144,7 @@ print(li_list[1].text)
 ```
 ```{python}
 agencies=[]
-for i in range(min(20, len(full_links))):
+for i in range(len(full_links)):
   url = full_links[i]
   response = requests.get(url)
   soup = BeautifulSoup(response.text, 'lxml')
@@ -317,6 +317,26 @@ def scrape_enforcement_actions(start_year, start_month):
 ```
 
 ```{python}
+# used ChatGPT to debug function and learn about concurrrent.futures.
+#prompt: "Is there a way to fake the function faster"
+
+from concurrent.futures import ThreadPoolExecutor
+
+# Function to scrape data from each individual page (with its URL)
+def scrape_agency_data(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'lxml')
+    ul_tag = soup.find('ul', class_="usa-list usa-list--unstyled margin-y-2")
+    
+    if ul_tag:
+        li_list = ul_tag.find_all('li')
+        span_tag = li_list[1].find('span', class_='padding-right-2 text-base')
+        if span_tag:
+            span_tag.decompose()
+        return li_list[1].text.strip()  # Return the agency
+    return None
+
+# Main scraping function
 def scrape(year, month):
     date_string = f'{year}-{month+1:02d}'
     set_date = pd.to_datetime(date_string, format='%Y-%m')
@@ -325,11 +345,15 @@ def scrape(year, month):
     dates = []
     categories = []
     full_links = []
+    agencies = []
+
+    # Use Session for connection pooling
+    session = requests.Session()
 
     for i in range(250):
         base = 'https://oig.hhs.gov/fraud/enforcement/?page='
         url = f'{base}{i}'
-        response = requests.get(url)
+        response = session.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
 
         body = soup.find('body')
@@ -337,32 +361,36 @@ def scrape(year, month):
         soup_titles = body.find_all('h2', class_='usa-card__heading')
         soup_category = body.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
 
-        # Ensure lengths match by iterating over all tags
+        # Extract titles, dates, categories, and links
         for date_tag, title_tag, category_tag in zip(soup_dates, soup_titles, soup_category):
-            # Dates
             date = pd.to_datetime(date_tag.text, format='%B %d, %Y')
             dates.append(date)
-
-            # Titles
             title = title_tag.find('a').text
             titles.append(title)
-
-            # Categories
             category = category_tag.text.strip()
             categories.append(category)
-
-            # Links
             href = title_tag.find('a').attrs.get('href')
             full_link = f'https://oig.hhs.gov/{href}'
             full_links.append(full_link)
 
-        if date< set_date:
+        # If the date is earlier than the set date, break out of the loop
+        if date < set_date:
             break
-    
-    scraped_data=data=pd.DataFrame({'Title':titles, 'Date':dates, 'Category':categories, 'Link':full_links})
+
+    # Use ThreadPoolExecutor to scrape agency data in parallel
+    with ThreadPoolExecutor() as executor:
+        agencies = list(executor.map(scrape_agency_data, full_links))
+
+    # Create DataFrame
+    scraped_data = pd.DataFrame({
+        'Title': titles,
+        'Date': dates,
+        'Category': categories,
+        'Link': full_links,
+        'Agency': agencies
+    })
     
     return scraped_data
-   
 ```
 ```{python}
 # Running scraper starting from January 2023
