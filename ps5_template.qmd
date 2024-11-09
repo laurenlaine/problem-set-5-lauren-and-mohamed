@@ -171,7 +171,6 @@ df.head()
 
 * b. Create Dynamic Scraper (PARTNER 2)
 
-
 ```{python}
 import requests
 from bs4 import BeautifulSoup
@@ -318,13 +317,60 @@ def scrape_enforcement_actions(start_year, start_month):
 ```
 
 ```{python}
+def scrape(year, month):
+    date_string = f'{year}-{month+1:02d}'
+    set_date = pd.to_datetime(date_string, format='%Y-%m')
+
+    titles = []
+    dates = []
+    categories = []
+    full_links = []
+
+    for i in range(250):
+        base = 'https://oig.hhs.gov/fraud/enforcement/?page='
+        url = f'{base}{i}'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'lxml')
+
+        body = soup.find('body')
+        soup_dates = body.find_all('span', class_='text-base-dark padding-right-105')
+        soup_titles = body.find_all('h2', class_='usa-card__heading')
+        soup_category = body.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
+
+        # Ensure lengths match by iterating over all tags
+        for date_tag, title_tag, category_tag in zip(soup_dates, soup_titles, soup_category):
+            # Dates
+            date = pd.to_datetime(date_tag.text, format='%B %d, %Y')
+            dates.append(date)
+
+            # Titles
+            title = title_tag.find('a').text
+            titles.append(title)
+
+            # Categories
+            category = category_tag.text.strip()
+            categories.append(category)
+
+            # Links
+            href = title_tag.find('a').attrs.get('href')
+            full_link = f'https://oig.hhs.gov/{href}'
+            full_links.append(full_link)
+
+        if date< set_date:
+            break
+    
+    scraped_data=data=pd.DataFrame({'Title':titles, 'Date':dates, 'Category':category, 'Link':full_links})
+    
+    return scraped_data
+```
+```{python}
 # Running scraper starting from January 2023
-df = scrape_enforcement_actions(2023, 1)
+scraped = scrape(2023, 1)
 ```
 
 ```{python}
-df['Date']=pd.to_datetime(df['Date'])
-df_23=df[df['Date'].dt.year==2023]
+#df['Date']=pd.to_datetime(df['Date'])
+df_23=scraped[scraped['Date'].dt.year==2023]
 ```
 
 * c. Test Partner's Code (PARTNER 1)
