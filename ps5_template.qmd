@@ -351,7 +351,7 @@ def scrape(year, month):
     for i in range(250):
         base = 'https://oig.hhs.gov/fraud/enforcement/?page='
         url = f'{base}{i}'
-        response = session.get(url)
+        response = requests.get(url)
         soup = BeautifulSoup(response.text, 'lxml')
 
         body = soup.find('body')
@@ -359,14 +359,20 @@ def scrape(year, month):
         soup_titles = body.find_all('h2', class_='usa-card__heading')
         soup_category = body.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
 
-
         for date_tag, title_tag, category_tag in zip(soup_dates, soup_titles, soup_category):
+            # Dates
             date = pd.to_datetime(date_tag.text, format='%B %d, %Y')
             dates.append(date)
+
+            # Titles
             title = title_tag.find('a').text
             titles.append(title)
+
+            # Categories
             category = category_tag.text.strip()
             categories.append(category)
+
+            # Links
             href = title_tag.find('a').attrs.get('href')
             full_link = f'https://oig.hhs.gov/{href}'
             full_links.append(full_link)
@@ -389,6 +395,7 @@ def scrape(year, month):
     })
     
     return scraped_data
+   
 ```
 ```{python}
 # Running scraper starting from January 2023
@@ -418,7 +425,29 @@ The length of the dataframe is 3020.
 ### 1. Plot the number of enforcement actions over time (PARTNER 2)
 
 ```{python}
+df_21['YearMonth'] = df_21['Date'].dt.to_period('M')
 
+# Aggregating the number of enforcement actions per month
+monthly_counts = df_21.groupby('YearMonth').size().reset_index(name='EnforcementCount')
+
+# Changing 'YearMonth' into datetime format for compatibility with Altair.
+monthly_counts['YearMonth'] = monthly_counts['YearMonth'].dt.to_timestamp()
+```
+
+```{python}
+chart_line = alt.Chart(monthly_counts).mark_line().encode(
+    x=alt.X('YearMonth:T', title='Month and Year',
+    axis=alt.Axis(format='%b %Y', tickCount='month')),
+    y=alt.Y('EnforcementCount:Q', title='Number of Enforcement Actions'),
+    tooltip=['YearMonth:T', 'EnforcementCount']
+).properties(
+    title='Count of Enforcement Actions OverTime(Monthly Aggregated from Jan2021)',
+    width=600,
+    height=400
+)
+
+# Display the chart
+chart_line
 ```
 
 ### 2. Plot the number of enforcement actions categorized: (PARTNER 1)
