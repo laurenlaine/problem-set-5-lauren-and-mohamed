@@ -322,7 +322,6 @@ def scrape_enforcement_actions(start_year, start_month):
 
 from concurrent.futures import ThreadPoolExecutor
 
-# Function to scrape data from each individual page (with its URL)
 def scrape_agency_data(url):
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'lxml')
@@ -336,7 +335,7 @@ def scrape_agency_data(url):
         return li_list[1].text.strip()  # Return the agency
     return None
 
-# Main scraping function
+
 def scrape(year, month):
     date_string = f'{year}-{month+1:02d}'
     set_date = pd.to_datetime(date_string, format='%Y-%m')
@@ -347,7 +346,6 @@ def scrape(year, month):
     full_links = []
     agencies = []
 
-    # Use Session for connection pooling
     session = requests.Session()
 
     for i in range(250):
@@ -361,7 +359,7 @@ def scrape(year, month):
         soup_titles = body.find_all('h2', class_='usa-card__heading')
         soup_category = body.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
 
-        # Extract titles, dates, categories, and links
+
         for date_tag, title_tag, category_tag in zip(soup_dates, soup_titles, soup_category):
             date = pd.to_datetime(date_tag.text, format='%B %d, %Y')
             dates.append(date)
@@ -373,7 +371,7 @@ def scrape(year, month):
             full_link = f'https://oig.hhs.gov/{href}'
             full_links.append(full_link)
 
-        # If the date is earlier than the set date, break out of the loop
+
         if date < set_date:
             break
 
@@ -381,7 +379,7 @@ def scrape(year, month):
     with ThreadPoolExecutor() as executor:
         agencies = list(executor.map(scrape_agency_data, full_links))
 
-    # Create DataFrame
+
     scraped_data = pd.DataFrame({
         'Title': titles,
         'Date': dates,
@@ -398,11 +396,8 @@ scraped = scrape(2023, 1)
 ```
 
 ```{python}
-df_23=scraped[scraped['Date'].dt.year==2023]
-```
-
-```{python}
-scraped.groupby('Category').size()
+print(len(scraped))
+print(scraped.tail(1))
 ```
 
 * c. Test Partner's Code (PARTNER 1)
@@ -501,14 +496,68 @@ actions_by_subcategory
 ### 1. Map by State (PARTNER 1)
 
 ```{python}
+import geopandas as gpd
+census_data=gpd.read_file(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\cb_2018_us_state_500k.shp")
+```
+
+```{python}
+enforcement_actions=df_21[df_21['Category']=='State Enforcement Agencies']
+```
+
+```{python}
+enforcement_actions.groupby('Agency').size()
+```
+```{python}
+states=['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky','Louisiana',
+'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska',
+'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas',
+'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+def assign_state(agency):
+    agency = agency.lower()  
+    for s in states:
+        if s.lower() in agency: 
+            return s
+    return 'Other'
 
 ```
 
+```{python}
+enforcement_actions['State']=enforcement_actions['Agency'].apply(assign_state)
+enforcement_actions.head() 
+```
 
+```{python}
+census_data=census_data[['NAME', 'geometry']]
+merge=enforcement_actions.merge(census_data, left_on='State', right_on='NAME', how='left')
+merge=gpd.GeoDataFrame(merge, geometry='geometry')
+```
+
+```{python}
+count=enforcement_actions.groupby('State').size()
+count=count.reset_index()
+count.columns=['State', 'Count']
+count.head()
+merged_counts=count.merge(census_data, left_on='State', right_on='NAME',
+how='left')
+merged_counts=gpd.GeoDataFrame(merged_counts, geometry='geometry')
+```
+
+```{python}
+plot_by_state=merged_counts.plot(column='Count', legend=True).set_axis_off()
+plot_by_state
+
+```
 ### 2. Map by District (PARTNER 2)
 
 ```{python}
-
+def assign_state(agency):
+    for i in enforcement_actions[agency]:
+        if i=='X'+"Attorney General":
+            return 'X'
+enforcement_actions['State']=assign_state('Agency')
+enforcement_actions.head()    
 ```
 
 ## Extra Credit
