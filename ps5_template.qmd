@@ -384,8 +384,11 @@ df_21=scrape(2021, 1 )
 ```
 
 ```{python}
-df_21.tail()
+print(len(df_21))
+print(df_21.tail(1))
+
 ```
+The length of the dataframe is 3020. 
 
 ## Step 3: Plot data based on scraped data
 
@@ -400,7 +403,13 @@ df_21.tail()
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
-test=df_21[df_21['Category']=='Criminal and Civil Actions']
+actions_by_category=alt.Chart(df_21).mark_line().transform_filter(
+ 'datum.Category==Criminal and Civil Actions or datum.Category==State Enforecement Agencies' ).encode(
+  alt.X('Date'),
+  alt.Y('count(Title)')
+  alt.Color('Category')
+)
+actions_by_category
 ```
 
 * based on five topics
