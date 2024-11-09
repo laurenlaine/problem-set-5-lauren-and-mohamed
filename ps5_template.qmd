@@ -359,9 +359,10 @@ def scrape(year, month):
         if date< set_date:
             break
     
-    scraped_data=data=pd.DataFrame({'Title':titles, 'Date':dates, 'Category':category, 'Link':full_links})
+    scraped_data=data=pd.DataFrame({'Title':titles, 'Date':dates, 'Category':categories, 'Link':full_links})
     
     return scraped_data
+   
 ```
 ```{python}
 # Running scraper starting from January 2023
@@ -369,14 +370,21 @@ scraped = scrape(2023, 1)
 ```
 
 ```{python}
-#df['Date']=pd.to_datetime(df['Date'])
 df_23=scraped[scraped['Date'].dt.year==2023]
+```
+
+```{python}
+scraped.groupby('Category').size()
 ```
 
 * c. Test Partner's Code (PARTNER 1)
 
 ```{python}
+df_21=scrape(2021, 1 )
+```
 
+```{python}
+df_21.tail()
 ```
 
 ## Step 3: Plot data based on scraped data
@@ -392,7 +400,7 @@ df_23=scraped[scraped['Date'].dt.year==2023]
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
-
+test=df_21[df_21['Category']=='Criminal and Civil Actions']
 ```
 
 * based on five topics

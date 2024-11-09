@@ -678,21 +678,16 @@ function}\label{turning-the-scraper-into-a-function}
 
 \NormalTok{    titles, dates, categories, full\_links }\OperatorTok{=}\NormalTok{ initialize\_data\_containers()}
     
-    \CommentTok{\# Base URL for enforcement actions page (update if necessary)}
 \NormalTok{    base\_url }\OperatorTok{=} \StringTok{\textquotesingle{}https://oig.hhs.gov/fraud/enforcement/\textquotesingle{}}
     
 \NormalTok{    current\_year, current\_month }\OperatorTok{=}\NormalTok{ get\_today\_date()}
     
     
-    \CommentTok{\# Start scraping from the given start year and month}
 \NormalTok{    year, month }\OperatorTok{=}\NormalTok{ start\_year, start\_month}
     
     \ControlFlowTok{while}\NormalTok{ (year }\OperatorTok{\textless{}}\NormalTok{ current\_year) }\KeywordTok{or}\NormalTok{ (year }\OperatorTok{==}\NormalTok{ current\_year }\KeywordTok{and}\NormalTok{ month }\OperatorTok{\textless{}=}\NormalTok{ current\_month):}
         
-        \CommentTok{\# Construct URL for each month (modify this part if pagination is different)}
 \NormalTok{        url }\OperatorTok{=} \SpecialStringTok{f"}\SpecialCharTok{\{}\NormalTok{base\_url}\SpecialCharTok{\}}\SpecialStringTok{?year=}\SpecialCharTok{\{}\NormalTok{year}\SpecialCharTok{\}}\SpecialStringTok{\&month=}\SpecialCharTok{\{}\NormalTok{month}\SpecialCharTok{\}}\SpecialStringTok{"}
-        
-        \CommentTok{\# Debugging: Print out which URL we are visiting}
         \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Scraping data for }\SpecialCharTok{\{}\NormalTok{year}\SpecialCharTok{\}}\SpecialStringTok{{-}}\SpecialCharTok{\{}\NormalTok{month}\SpecialCharTok{:02d\}}\SpecialStringTok{ from }\SpecialCharTok{\{}\NormalTok{url}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
         
         \ControlFlowTok{if}\NormalTok{ url }\KeywordTok{in}\NormalTok{ visited\_urls:}
@@ -708,9 +703,8 @@ function}\label{turning-the-scraper-into-a-function}
 
 \NormalTok{        visited\_urls.append(url)}
         
-\NormalTok{        time.sleep(}\DecValTok{2}\NormalTok{)  }\CommentTok{\# Wait for 2 seconds between requests}
+\NormalTok{        time.sleep(}\DecValTok{2}\NormalTok{)  }
         
-        \CommentTok{\# Update month and year}
 \NormalTok{        month }\OperatorTok{+=} \DecValTok{1}
         \ControlFlowTok{if}\NormalTok{ month }\OperatorTok{\textgreater{}} \DecValTok{12}\NormalTok{:}
 \NormalTok{            month }\OperatorTok{=} \DecValTok{1}
@@ -727,44 +721,65 @@ function}\label{turning-the-scraper-into-a-function}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Running scraper starting from January 2023}
-\NormalTok{df }\OperatorTok{=}\NormalTok{ scrape\_enforcement\_actions(}\DecValTok{2023}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\KeywordTok{def}\NormalTok{ scrape(year, month):}
+\NormalTok{    date\_string }\OperatorTok{=} \SpecialStringTok{f\textquotesingle{}}\SpecialCharTok{\{}\NormalTok{year}\SpecialCharTok{\}}\SpecialStringTok{{-}}\SpecialCharTok{\{}\NormalTok{month}\OperatorTok{+}\DecValTok{1}\SpecialCharTok{:02d\}}\SpecialStringTok{\textquotesingle{}}
+\NormalTok{    set\_date }\OperatorTok{=}\NormalTok{ pd.to\_datetime(date\_string, }\BuiltInTok{format}\OperatorTok{=}\StringTok{\textquotesingle{}\%Y{-}\%m\textquotesingle{}}\NormalTok{)}
+
+\NormalTok{    titles }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    dates }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    categories }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    full\_links }\OperatorTok{=}\NormalTok{ []}
+
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(}\DecValTok{250}\NormalTok{):}
+\NormalTok{        base }\OperatorTok{=} \StringTok{\textquotesingle{}https://oig.hhs.gov/fraud/enforcement/?page=\textquotesingle{}}
+\NormalTok{        url }\OperatorTok{=} \SpecialStringTok{f\textquotesingle{}}\SpecialCharTok{\{}\NormalTok{base}\SpecialCharTok{\}\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{\textquotesingle{}}
+\NormalTok{        response }\OperatorTok{=}\NormalTok{ requests.get(url)}
+\NormalTok{        soup }\OperatorTok{=}\NormalTok{ BeautifulSoup(response.text, }\StringTok{\textquotesingle{}lxml\textquotesingle{}}\NormalTok{)}
+
+\NormalTok{        body }\OperatorTok{=}\NormalTok{ soup.find(}\StringTok{\textquotesingle{}body\textquotesingle{}}\NormalTok{)}
+\NormalTok{        soup\_dates }\OperatorTok{=}\NormalTok{ body.find\_all(}\StringTok{\textquotesingle{}span\textquotesingle{}}\NormalTok{, class\_}\OperatorTok{=}\StringTok{\textquotesingle{}text{-}base{-}dark padding{-}right{-}105\textquotesingle{}}\NormalTok{)}
+\NormalTok{        soup\_titles }\OperatorTok{=}\NormalTok{ body.find\_all(}\StringTok{\textquotesingle{}h2\textquotesingle{}}\NormalTok{, class\_}\OperatorTok{=}\StringTok{\textquotesingle{}usa{-}card\_\_heading\textquotesingle{}}\NormalTok{)}
+\NormalTok{        soup\_category }\OperatorTok{=}\NormalTok{ body.find\_all(}\StringTok{\textquotesingle{}li\textquotesingle{}}\NormalTok{, class\_}\OperatorTok{=}\StringTok{"display{-}inline{-}block usa{-}tag text{-}no{-}lowercase text{-}base{-}darkest bg{-}base{-}lightest margin{-}right{-}1"}\NormalTok{)}
+
+        \CommentTok{\# Ensure lengths match by iterating over all tags}
+        \ControlFlowTok{for}\NormalTok{ date\_tag, title\_tag, category\_tag }\KeywordTok{in} \BuiltInTok{zip}\NormalTok{(soup\_dates, soup\_titles, soup\_category):}
+            \CommentTok{\# Dates}
+\NormalTok{            date }\OperatorTok{=}\NormalTok{ pd.to\_datetime(date\_tag.text, }\BuiltInTok{format}\OperatorTok{=}\StringTok{\textquotesingle{}\%B }\SpecialCharTok{\%d}\StringTok{, \%Y\textquotesingle{}}\NormalTok{)}
+\NormalTok{            dates.append(date)}
+
+            \CommentTok{\# Titles}
+\NormalTok{            title }\OperatorTok{=}\NormalTok{ title\_tag.find(}\StringTok{\textquotesingle{}a\textquotesingle{}}\NormalTok{).text}
+\NormalTok{            titles.append(title)}
+
+            \CommentTok{\# Categories}
+\NormalTok{            category }\OperatorTok{=}\NormalTok{ category\_tag.text.strip()}
+\NormalTok{            categories.append(category)}
+
+            \CommentTok{\# Links}
+\NormalTok{            href }\OperatorTok{=}\NormalTok{ title\_tag.find(}\StringTok{\textquotesingle{}a\textquotesingle{}}\NormalTok{).attrs.get(}\StringTok{\textquotesingle{}href\textquotesingle{}}\NormalTok{)}
+\NormalTok{            full\_link }\OperatorTok{=} \SpecialStringTok{f\textquotesingle{}https://oig.hhs.gov/}\SpecialCharTok{\{}\NormalTok{href}\SpecialCharTok{\}}\SpecialStringTok{\textquotesingle{}}
+\NormalTok{            full\_links.append(full\_link)}
+
+        \ControlFlowTok{if}\NormalTok{ date}\OperatorTok{\textless{}}\NormalTok{ set\_date:}
+            \ControlFlowTok{break}
+    
+\NormalTok{    scraped\_data}\OperatorTok{=}\NormalTok{data}\OperatorTok{=}\NormalTok{pd.DataFrame(\{}\StringTok{\textquotesingle{}Title\textquotesingle{}}\NormalTok{:titles, }\StringTok{\textquotesingle{}Date\textquotesingle{}}\NormalTok{:dates, }\StringTok{\textquotesingle{}Category\textquotesingle{}}\NormalTok{:category, }\StringTok{\textquotesingle{}Link\textquotesingle{}}\NormalTok{:full\_links\})}
+    
+    \ControlFlowTok{return}\NormalTok{ scraped\_data}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-Scraping data for 2023-01 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=1
-Scraping data for 2023-02 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=2
-Scraping data for 2023-03 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=3
-Scraping data for 2023-04 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=4
-Scraping data for 2023-05 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=5
-Scraping data for 2023-06 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=6
-Scraping data for 2023-07 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=7
-Scraping data for 2023-08 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=8
-Scraping data for 2023-09 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=9
-Scraping data for 2023-10 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=10
-Scraping data for 2023-11 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=11
-Scraping data for 2023-12 from https://oig.hhs.gov/fraud/enforcement/?year=2023&month=12
-Scraping data for 2024-01 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=1
-Scraping data for 2024-02 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=2
-Scraping data for 2024-03 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=3
-Scraping data for 2024-04 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=4
-Scraping data for 2024-05 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=5
-Scraping data for 2024-06 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=6
-Scraping data for 2024-07 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=7
-Scraping data for 2024-08 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=8
-Scraping data for 2024-09 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=9
-Scraping data for 2024-10 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=10
-Scraping data for 2024-11 from https://oig.hhs.gov/fraud/enforcement/?year=2024&month=11
-Data saved to enforcement_actions_2023_01.csv
-Number of enforcement actions: 460
-Earliest enforcement action Date - November 1, 2024, Title - St. Louis County Woman Accused Of $3 Million Home Health Care Fraud
-\end{verbatim}
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Running scraper starting from January 2023}
+\NormalTok{scraped }\OperatorTok{=}\NormalTok{ scrape(}\DecValTok{2023}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{df[}\StringTok{\textquotesingle{}Date\textquotesingle{}}\NormalTok{]}\OperatorTok{=}\NormalTok{pd.to\_datetime(df[}\StringTok{\textquotesingle{}Date\textquotesingle{}}\NormalTok{])}
-\NormalTok{df\_23}\OperatorTok{=}\NormalTok{df[df[}\StringTok{\textquotesingle{}Date\textquotesingle{}}\NormalTok{].dt.year}\OperatorTok{==}\DecValTok{2023}\NormalTok{]}
+\CommentTok{\#df[\textquotesingle{}Date\textquotesingle{}]=pd.to\_datetime(df[\textquotesingle{}Date\textquotesingle{}])}
+\NormalTok{df\_23}\OperatorTok{=}\NormalTok{scraped[scraped[}\StringTok{\textquotesingle{}Date\textquotesingle{}}\NormalTok{].dt.year}\OperatorTok{==}\DecValTok{2023}\NormalTok{]}
 \end{Highlighting}
 \end{Shaded}
 
@@ -779,6 +794,42 @@ Earliest enforcement action Date - November 1, 2024, Title - St. Louis County Wo
     Test Partner's Code (PARTNER 1)
   \end{enumerate}
 \end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_21}\OperatorTok{=}\NormalTok{scrape(}\DecValTok{2021}\NormalTok{, }\DecValTok{1}\NormalTok{ )}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_21.tail()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+& Title & Date & Category & Link \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+3015 & Assisted Living Facility Supervisor Arrested f... & 2021-01-25 &
+State Enforcement Agencies &
+https://oig.hhs.gov//fraud/enforcement/assiste... \\
+3016 & Maryland Woman Sentenced for Committing Health... & 2021-01-22 &
+State Enforcement Agencies &
+https://oig.hhs.gov//fraud/enforcement/marylan... \\
+3017 & Estate Of Deceased Urologist Agrees To Pay Mor... & 2021-01-22 &
+State Enforcement Agencies &
+https://oig.hhs.gov//fraud/enforcement/estate-... \\
+3018 & Logan County Pharmacy to Pay Civil Monetary Pe... & 2021-01-22 &
+State Enforcement Agencies &
+https://oig.hhs.gov//fraud/enforcement/logan-c... \\
+3019 & Attorney General Becerra Announces \$40 Million... & 2021-01-22 &
+State Enforcement Agencies &
+https://oig.hhs.gov//fraud/enforcement/attorne... \\
+\end{longtable}
 
 \subsection{Step 3: Plot data based on scraped
 data}\label{step-3-plot-data-based-on-scraped-data}
