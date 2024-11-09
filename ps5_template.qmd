@@ -403,10 +403,15 @@ The length of the dataframe is 3020.
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
-actions_by_category=alt.Chart(df_21).mark_line().transform_filter(
- 'datum.Category==Criminal and Civil Actions or datum.Category==State Enforecement Agencies' ).encode(
-  alt.X('Date'),
-  alt.Y('count(Title)')
+filtered_df_21 = df_21[(df_21['Category'] == "Criminal and Civil Actions") | (df_21['Category'] == 'State Enforcement Agencies')]
+
+filtered_df_21.head(20)
+
+```
+```{python}
+actions_by_category=alt.Chart(filtered_df_21, title='Number of Enforcement Actions by Category over Time').mark_line().encode(
+  alt.X('year(Date)'),
+  alt.Y('count(Title)'),
   alt.Color('Category')
 )
 actions_by_category
@@ -415,9 +420,54 @@ actions_by_category
 * based on five topics
 
 ```{python}
+crim_and_civil=df_21[df_21['Category']=='Criminal and Civil Actions']
+crim_and_civil.head()
+```
+
+```{python}
+def assign_subcategory(title):
+    if 'financial' in title.lower():
+        return 'Financial Fraud'
+    elif 'bank' in title.lower():
+        return 'Financial Fraud'
+    elif 'embezzled' in title.lower():
+        return 'Financial Fraud'
+    elif 'doctor' in title.lower():
+        return 'Health Care Fraud'
+    elif 'nurse' in title.lower():
+        return 'Health Care Fraud'
+    elif 'hospital' in title.lower():
+        return 'Health Care Fraud'
+    elif 'drug' in title.lower():
+        return 'Drug Enforcement'
+    elif 'possession' in title.lower():
+        return 'Drug Enforcement'
+    elif 'marijuana' in title.lower():
+        return 'Drug Enforcement'
+    elif 'bribe' in title.lower():
+        return 'Bribery/Corruption'
+    elif 'favor' in title.lower():
+        return 'Bribery/Corruption'
+    else:
+        return 'Other'
+
+crim_and_civil['Subcategory'] = crim_and_civil['Title'].apply(assign_subcategory)
 
 ```
 
+```{python}
+#Check that there are some results in each subcategory
+crim_and_civil.groupby('Subcategory').size()
+```
+
+```{python}
+actions_by_subcategory=alt.Chart(crim_and_civil, title='Number of Enforcement Actions by Subcategory over Time').mark_line().encode(
+  alt.X('year(Date)'),
+  alt.Y('count(Title)'),
+  alt.Color('Subcategory')
+)
+actions_by_subcategory
+```
 ## Step 4: Create maps of enforcement activity
 
 ### 1. Map by State (PARTNER 1)
