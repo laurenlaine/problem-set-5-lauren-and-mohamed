@@ -674,10 +674,84 @@ zipcode_merged=gpd.GeoDataFrame(zipcode_merged, geometry='geometry')
 
 ### 2. Conduct spatial join
 ```{python}
+zipcode_merged = zipcode_merged.to_crs(us_attorney_districts.crs)
 
+district_population = gpd.sjoin(zipcode_merged, us_attorney_districts, how="inner", predicate="intersects")
+
+district_population = district_population.groupby("judicial_d")["Total"].sum().reset_index()
+district_population.columns = ["judicial_d", "Population"]
+
+merged_district_counts = merged_district_counts.merge(district_population, on="judicial_d", how="left")
+```
+
+```{python}
+merged_district_counts["Actions_Per_Capita"] = (merged_district_counts["Count"] / merged_district_counts["Population"]) * 100000
+
+merged_district_counts["Actions_Per_Capita"] = merged_district_counts["Actions_Per_Capita"].fillna(0)
+```
+
+```{python}
+merged_district_counts_geojson = merged_district_counts.to_crs(epsg=4326).__geo_interface__
+
+alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features'])).mark_geoshape().encode(
+    color=alt.Color('properties.Actions_Per_Capita:Q', 
+                    title='Enforcement Actions per 100,000 people',
+                    scale=alt.Scale(scheme='blues')),
+    tooltip=[
+        alt.Tooltip('properties.judicial_d:N', title='District'),
+        alt.Tooltip('properties.Count:Q', title='Enforcement Actions'),
+        alt.Tooltip('properties.Population:Q', title='Population', format=','),
+        alt.Tooltip('properties.Actions_Per_Capita:Q', title='Actions per 100,000 people', format='.2f')
+    ]
+).properties(
+    width=800,
+    height=500,
+    title="Enforcement Actions per Capita by U.S. Attorney District"
+).project(
+    type='albersUsa'
+).configure_legend(
+    titleFontSize=14,
+    labelFontSize=12,
+    symbolSize=100,
+    orient='right'
+)
+
+alt_chart.show()
 ```
 
 ### 3. Map the action ratio in each district
 ```{python}
+merged_district_counts["Actions_Per_Capita"] = (merged_district_counts["Count"] / merged_district_counts["Population"]) * 100000
 
+merged_district_counts["Actions_Per_Capita"] = merged_district_counts["Actions_Per_Capita"].fillna(0)
+```
+
+```{python}
+merged_district_counts_geojson = merged_district_counts.to_crs(epsg=4326).__geo_interface__
+
+alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features'])).mark_geoshape().encode(
+    color=alt.Color('properties.Actions_Per_Capita:Q', 
+                    title='Enforcement Actions per 100,000 people',
+                    scale=alt.Scale(scheme='blues')),
+    tooltip=[
+        alt.Tooltip('properties.judicial_d:N', title='District'),
+        alt.Tooltip('properties.Count:Q', title='Enforcement Actions'),
+        alt.Tooltip('properties.Population:Q', title='Population', format=','),
+        alt.Tooltip('properties.Actions_Per_Capita:Q', title='Actions per 100,000 people', format='.2f')
+    ]
+).properties(
+    width=800,
+    height=500,
+    title="Enforcement Actions per Capita by U.S. Attorney District"
+).project(
+    type='albersUsa'
+).configure_legend(
+    titleFontSize=14,
+    labelFontSize=12,
+    symbolSize=100,
+    orient='right',
+    labelLimit=0
+)
+
+alt_chart.show()
 ```
