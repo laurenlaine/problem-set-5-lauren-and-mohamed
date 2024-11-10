@@ -425,10 +425,11 @@ The length of the dataframe is 3020.
 ### 1. Plot the number of enforcement actions over time (PARTNER 2)
 
 ```{python}
-df_21['YearMonth'] = df_21['Date'].dt.to_period('M')
+df_21_months=df_21_months
+df_21_months['YearMonth'] = df_21_months['Date'].dt.to_period('M')
 
 # Aggregating the number of enforcement actions per month
-monthly_counts = df_21.groupby('YearMonth').size().reset_index(name='EnforcementCount')
+monthly_counts = df_21_months.groupby('YearMonth').size().reset_index(name='EnforcementCount')
 
 # Changing 'YearMonth' into datetime format for compatibility with Altair.
 monthly_counts['YearMonth'] = monthly_counts['YearMonth'].dt.to_timestamp()
@@ -455,14 +456,18 @@ chart_line
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
+df_21=df_21.drop('YearMonth', axis=1)
+```
+```{python}
 filtered_df_21 = df_21[(df_21['Category'] == "Criminal and Civil Actions") | (df_21['Category'] == 'State Enforcement Agencies')]
 
 filtered_df_21.head(20)
+df_21.head(20)
 
 ```
 ```{python}
 actions_by_category=alt.Chart(filtered_df_21, title='Number of Enforcement Actions by Category over Time').mark_line().encode(
-  alt.X('year(Date)'),
+  alt.X('year(Date):T'),
   alt.Y('count(Title)'),
   alt.Color('Category')
 )
