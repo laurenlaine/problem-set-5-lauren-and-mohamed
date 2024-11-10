@@ -42,7 +42,7 @@ Late coins left after submission: \*\*\_\_\*\*
 9. (Partner 1): submit `ps5.pdf` via Gradescope. Add your partner on Gradescope.
 10. (Partner 1): tag your submission in Gradescope
 
-\newpage
+
 
 ```{python}
 import pandas as pd
@@ -69,6 +69,7 @@ soup.text[0:50]
 ```
 
 ```{python}
+#| eval: false
 # scrape title of the enforcement action 
 # used ChatGPT to figure out the the class attribute is written as class_
 #Prompt why won't this code run : soup.find_all('h2', class ='usa-card__heading')
@@ -82,6 +83,7 @@ print(a_tags[19])
 ```
 
 ```{python}
+#| eval: false
 #scrape date
 dates=[]
 soup_dates=soup.find_all('span', class_='text-base-dark padding-right-105')
@@ -93,6 +95,7 @@ print(dates[19])
 ```
 
 ```{python}
+#| eval: false
 # scrape category
 category=[]
 soup_category=soup.find_all('li', class_="display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1")
@@ -103,6 +106,7 @@ print(category[19])
 ```
 
 ```{python}
+#| eval: false
 #scrape link associated with the enforecment action 
 hrefs=[]
 link_tags=[]
@@ -124,6 +128,7 @@ print(full_links)
 ```
 
 ```{python}
+#| eval: false
 #create dataframe
 df=pd.DataFrame({'Title':a_tags, 'Date':dates, 'Category':category, 'Link':full_links})
 
@@ -132,6 +137,7 @@ len(df)
 ```
 ### 2. Crawling (PARTNER 1)
 ```{python}
+#| eval: false
 url = 'https://oig.hhs.gov/fraud/enforcement/washington-doctor-settles-allegations-he-submitted-false-claims-to-federal-health-care-programs/'
 response = requests.get(url)
 soup = BeautifulSoup(response.text, 'lxml')
@@ -147,6 +153,7 @@ if span_tag:
 print(li_list[1].text)
 ```
 ```{python}
+#| eval: false
 agencies=[]
 for i in range(len(full_links)):
   url = full_links[i]
@@ -162,10 +169,18 @@ for i in range(len(full_links)):
   agencies.append(agency)
 ```
 ```{python}
+#| eval: false
 df['Agency']=agencies
 df.head()
 ```
 
+```{python}
+df=pd.read_csv(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\first_page_scrape.csv")
+```
+
+```{python}
+df.head()
+```
 ## Step 2: Making the scraper dynamic
 
 ### 1. Turning the scraper into a function 
@@ -360,7 +375,7 @@ def scrape(year, month):
         if date < set_date:
             break
 
-       time.sleep(2)
+        time.sleep(2)
   
     # Use ThreadPoolExecutor to scrape agency data in parallel
     with ThreadPoolExecutor() as executor:
@@ -379,10 +394,14 @@ def scrape(year, month):
    
 ```
 ```{python}
+#| eval: false
 # Running scraper starting from January 2023
 scraped = scrape(2023, 1)
 ```
 
+```{python}
+scraped=pd.read_csv(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\enforcement_actions_2023_01.csv")
+```
 ```{python}
 print(len(scraped))
 print(scraped.tail(1))
@@ -394,7 +413,12 @@ The earliest enforcement action it scraped in Martin Joseph O’Brien Agreed to 
 * c. Test Partner's Code (PARTNER 1)
 
 ```{python}
+#| eval: false
 df_21=scrape(2021, 1 )
+```
+
+```{python}
+df_21=pd.read_csv(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\enforcement_actions_2021_01.csv")
 ```
 
 ```{python}
@@ -410,6 +434,7 @@ The length of the dataframe is 3020.
 
 ```{python}
 df_21_months=df_21
+df_21_months['Date']=pd.to_datetime(df_21_months['Date'])
 df_21_months['YearMonth'] = df_21_months['Date'].dt.to_period('M')
 
 # Aggregating the number of enforcement actions per month
@@ -579,7 +604,7 @@ from fuzzywuzzy import process
 ```{python}
 df_21 = df_21  
 
-us_attorney_districts = gpd.read_file("C:\\Users\\mmmoh\\DPPS Python\\PSet\\problem-set-5-lauren-and-mohamed\\geo_export_81c28c49-d209-4fde-b0e2-70c7929ed1f0.shp")
+us_attorney_districts = gpd.read_file(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\geo_export_eb53b65d-074a-4822-9a10-a283d465ebec.shp")
 ```
 
 ```{python}
@@ -619,9 +644,9 @@ district_choices = us_attorney_districts['cleaned_district'].tolist()
 district_action_counts['matched_district'] = district_action_counts['cleaned_district'].apply(lambda x: match_district(x, district_choices))
 
 merged_district_counts = us_attorney_districts.merge(district_action_counts, 
-                                                     left_on='cleaned_district', 
-                                                     right_on='matched_district', 
-                                                     how='left')
+left_on='cleaned_district', 
+right_on='matched_district', 
+how='left')
 
 merged_district_counts['Count'] = merged_district_counts['Count'].fillna(0)
 
@@ -639,7 +664,7 @@ alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features']
         alt.Tooltip('properties.Count:Q', title='Enforcement Actions')
     ]
 ).properties(
-    width=800,
+    width=500,
     height=500,
     title="Enforcement Actions by U.S. Attorney District"
 ).project(
@@ -676,87 +701,21 @@ zipcode_merged=zipcode_pop_data.merge(zipcode_geo_data, left_on='NAME', right_on
 zipcode_merged=gpd.GeoDataFrame(zipcode_merged, geometry='geometry')
 ```
 
+
 ### 2. Conduct spatial join
 ```{python}
 zipcode_merged = zipcode_merged.to_crs(us_attorney_districts.crs)
 
 district_population = gpd.sjoin(zipcode_merged, us_attorney_districts, how="inner", predicate="intersects")
 
-district_population = district_population.groupby("judicial_d")["Total"].sum().reset_index()
+district_population = district_population.groupby("judicial_d")["P1_001N"].sum().reset_index()
 district_population.columns = ["judicial_d", "Population"]
 
 merged_district_counts = merged_district_counts.merge(district_population, on="judicial_d", how="left")
 ```
 
-```{python}
-merged_district_counts["Actions_Per_Capita"] = (merged_district_counts["Count"] / merged_district_counts["Population"]) * 100000
-
-merged_district_counts["Actions_Per_Capita"] = merged_district_counts["Actions_Per_Capita"].fillna(0)
-```
-
-```{python}
-merged_district_counts_geojson = merged_district_counts.to_crs(epsg=4326).__geo_interface__
-
-alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features'])).mark_geoshape().encode(
-    color=alt.Color('properties.Actions_Per_Capita:Q', 
-                    title='Enforcement Actions per 100,000 people',
-                    scale=alt.Scale(scheme='blues')),
-    tooltip=[
-        alt.Tooltip('properties.judicial_d:N', title='District'),
-        alt.Tooltip('properties.Count:Q', title='Enforcement Actions'),
-        alt.Tooltip('properties.Population:Q', title='Population', format=','),
-        alt.Tooltip('properties.Actions_Per_Capita:Q', title='Actions per 100,000 people', format='.2f')
-    ]
-).properties(
-    width=800,
-    height=500,
-    title="Enforcement Actions per Capita by U.S. Attorney District"
-).project(
-    type='albersUsa'
-).configure_legend(
-    titleFontSize=14,
-    labelFontSize=12,
-    symbolSize=100,
-    orient='right'
-)
-
-alt_chart.show()
-```
-
 ### 3. Map the action ratio in each district
 ```{python}
-merged_district_counts["Actions_Per_Capita"] = (merged_district_counts["Count"] / merged_district_counts["Population"]) * 100000
-
-merged_district_counts["Actions_Per_Capita"] = merged_district_counts["Actions_Per_Capita"].fillna(0)
-```
-
-```{python}
-merged_district_counts_geojson = merged_district_counts.to_crs(epsg=4326).__geo_interface__
-
-alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features'])).mark_geoshape().encode(
-    color=alt.Color('properties.Actions_Per_Capita:Q', 
-                    title='Enforcement Actions per 100,000 people',
-                    scale=alt.Scale(scheme='blues')),
-    tooltip=[
-        alt.Tooltip('properties.judicial_d:N', title='District'),
-        alt.Tooltip('properties.Count:Q', title='Enforcement Actions'),
-        alt.Tooltip('properties.Population:Q', title='Population', format=','),
-        alt.Tooltip('properties.Actions_Per_Capita:Q', title='Actions per 100,000 people', format='.2f')
-    ]
-).properties(
-    width=800,
-    height=500,
-    title="Enforcement Actions per Capita by U.S. Attorney District"
-).project(
-    type='albersUsa'
-).configure_legend(
-    titleFontSize=14,
-    labelFontSize=12,
-    symbolSize=100,
-    orient='right',
-    labelLimit=0
-)
-
-alt_chart.show()
 
 ```
+
