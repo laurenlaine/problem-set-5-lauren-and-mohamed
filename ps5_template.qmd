@@ -754,4 +754,5 @@ alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features']
 )
 
 alt_chart.show()
+
 ```
