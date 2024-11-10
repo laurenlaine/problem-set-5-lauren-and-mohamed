@@ -587,9 +587,13 @@ plot_by_state
 ### 2. Map by District (PARTNER 2)
 
 ```{python}
-   
+ districts=gpd.read_file(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\geo_export_eb53b65d-074a-4822-9a10-a283d465ebec.shp") 
 ```
 
+```{python}
+crim_and_civil['District']=crim_and_civil['Agency'].map(lambda x: x.replace("U.S. Attorney's Office,", ""))
+crim_and_civil.head()
+```
 ## Extra Credit
 
 ### 1. Merge zip code shapefile with population
