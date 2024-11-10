@@ -457,6 +457,7 @@ chart_line
 
 ```{python}
 df_21=df_21.drop('YearMonth', axis=1)
+
 ```
 ```{python}
 filtered_df_21 = df_21[(df_21['Category'] == "Criminal and Civil Actions") | (df_21['Category'] == 'State Enforcement Agencies')]
