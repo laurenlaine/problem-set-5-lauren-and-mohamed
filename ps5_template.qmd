@@ -1,7 +1,7 @@
 ---
 title: "Problem Set 5"
 author: "Lauren Laine and Mohamed Mohamed"
-date: "date"
+date: "11/10/24"
 format: 
   pdf:
     include-in-header: 
@@ -30,8 +30,12 @@ output:
     - Partner 2 (name and cnet ID): Mohamed Mohamed, shahim143
 3. Partner 1 will accept the `ps5` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
 4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*\_\_\*\* \*\*\_\_\*\*
+LL MM
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
-6. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+6. Late coins used this pset: \*\*\_\_\*\* 
+1 each
+Late coins left after submission: \*\*\_\_\*\*
+1 each
 7. Knit your `ps5.qmd` to an PDF file to make `ps5.pdf`, 
     * The PDF should not be more than 25 pages. Use `head()` and re-size figures when appropriate. 
 8. (Partner 1): push  `ps5.qmd` and `ps5.pdf` to your github repo.
