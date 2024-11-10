@@ -266,56 +266,6 @@ def showing_summary(df):
         print(f"Earliest enforcement action Date - {earliest_action['Date']}, Title - {earliest_action['Title']}")
 ```
 
-
-```{python}
-visited_urls = []
-
-def scrape_enforcement_actions(start_year, start_month):
-    if not check_input(start_year):
-        return
-
-    titles, dates, categories, full_links = initialize_data_containers()
-    
-    base_url = 'https://oig.hhs.gov/fraud/enforcement/'
-    
-    current_year, current_month = get_today_date()
-    
-    
-    year, month = start_year, start_month
-    
-    while (year < current_year) or (year == current_year and month <= current_month):
-        
-        url = f"{base_url}?year={year}&month={month}"
-        print(f"Scraping data for {year}-{month:02d} from {url}")
-        
-        if url in visited_urls:
-            print("Stopped because ended up in a loop.")
-            break
-
-        soup = get_page_content(url)
-        
-        titles.extend(get_titles(soup))
-        dates.extend(get_dates(soup))
-        categories.extend(get_categories(soup))
-        full_links.extend(get_links(soup))
-
-        visited_urls.append(url)
-        
-        time.sleep(2)  
-        
-        month += 1
-        if month > 12:
-            month = 1
-            year += 1
-    
-    df = making_dataframe(titles, dates, categories, full_links)
-    
-    save_to_csv(df, start_year, start_month)
-    showing_summary(df)
-    
-    return df
-```
-
 ```{python}
 # used ChatGPT to debug function and learn about concurrrent.futures.
 #prompt: "Is there a way to fake the function faster"
@@ -381,6 +331,8 @@ def scrape(year, month):
         if date < set_date:
             break
 
+       time.sleep(2)
+  
     # Use ThreadPoolExecutor to scrape agency data in parallel
     with ThreadPoolExecutor() as executor:
         agencies = list(executor.map(scrape_agency_data, full_links))
@@ -393,7 +345,7 @@ def scrape(year, month):
         'Link': full_links,
         'Agency': agencies
     })
-    
+    save_to_csv(scraped_data, year, month)
     return scraped_data
    
 ```
@@ -407,6 +359,8 @@ print(len(scraped))
 print(scraped.tail(1))
 ```
 
+The length of enforcement actions we get in our final dataframe is 1500.
+???What is the date and details of the earliest enforcement action it scraped?
 * c. Test Partner's Code (PARTNER 1)
 
 ```{python}
@@ -594,6 +548,43 @@ plot_by_state
 crim_and_civil['District']=crim_and_civil['Agency'].map(lambda x: x.replace("U.S. Attorney's Office,", ""))
 crim_and_civil.head()
 ```
+
+```{python}
+enforcement_data_by_district = df_21
+
+enforcement_data_by_district['District'] = enforcement_data_by_district['Agency'].str.extract(r'(District.*)')
+
+enforcement_data_by_district['District'] = enforcement_data_by_district['District'].str.replace("U.S. Attorney's Office,", "").str.strip()
+
+district_action_counts = enforcement_data_by_district.groupby('District').size().reset_index(name='action_count')
+
+us_attorney_districts = gpd.read_file("C:\\Users\\mmmoh\\DPPS Python\\PSet\\problem-set-5-lauren-and-mohamed\\geo_export_81c28c49-d209-4fde-b0e2-70c7929ed1f0.shp")
+census_states = gpd.read_file("C:\\Users\\mmmoh\\DPPS Python\\PSet\\problem-set-5-lauren-and-mohamed\\cb_2018_us_state_500k.shp")
+
+us_attorney_districts = us_attorney_districts.merge(district_action_counts, left_on='district_n', right_on='District', how='left')
+
+us_attorney_districts = us_attorney_districts.to_crs(epsg=4326)  
+us_attorney_districts_geojson = us_attorney_districts.to_json()
+
+
+alt_chart = alt.Chart(alt.Data(values=us_attorney_districts_geojson)).mark_geoshape().encode(
+    color=alt.Color('properties.action_count:Q', title='Enforcement Actions'),
+    tooltip=[
+        alt.Tooltip('properties.District:N', title='District'),
+        alt.Tooltip('properties.action_count:Q', title='Enforcement Actions')
+    ]
+).properties(
+    width=800,
+    height=500,
+    title="Enforcement Actions by U.S. Attorney District"
+).project(
+    type='albersUsa'
+)
+
+alt_chart.display()
+
+```
+
 ## Extra Credit
 
 ### 1. Merge zip code shapefile with population
