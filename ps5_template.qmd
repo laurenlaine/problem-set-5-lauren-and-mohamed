@@ -167,6 +167,31 @@ df.head()
 ### 1. Turning the scraper into a function 
 
 * a. Pseudo-Code (PARTNER 2)
+1.	First will check if the input year is >= 2013, then print error message if year < 2013 and return (False); otherwise, return (True).
+
+2.	Will return four empty lists to store scraped data (titles, dates, categories, links).
+
+3.	Get the current year and month.
+
+4.	Send a request to the URL so that it will return content using BeautifulSoup.
+
+5.	Get all `h2` elements with a specific class, extract text from anchor tags, to return title.
+
+6.	Get all `span` elements with a specific class, extract text, which will return dates.
+
+7.	Get all `li` elements with a specific class, extract text, which will return categories.
+
+8.	Get all `h2` elements, extract `href` attributes, prefix with base URL, which will return list of full URLs (links).
+
+9.	making_dataframe that has (titles, dates, categories, links)
+
+10.	Save the DataFrame to CSV file with a filename based on year and month.
+
+11.	Summary to print the number of records, earliest action date, and title if data exists.
+
+12.	Get and parse HTML content, locate specific (ul) and (li) tags, extract agency name.
+
+13.	Initialize data containers, scrape pages for data fields (titles, dates, categories, links) until reaching the target date, and use parallel processing for agency data.
 
 
 * b. Create Dynamic Scraper (PARTNER 2)
@@ -360,7 +385,8 @@ print(scraped.tail(1))
 ```
 
 The length of enforcement actions we get in our final dataframe is 1500.
-???What is the date and details of the earliest enforcement action it scraped?
+The earliest enforcement action it scraped in Martin Joseph O’Brien Agreed to Be Excluded fo... 2023-01-30
+
 * c. Test Partner's Code (PARTNER 1)
 
 ```{python}
@@ -541,37 +567,72 @@ plot_by_state
 ### 2. Map by District (PARTNER 2)
 
 ```{python}
- districts=gpd.read_file(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\geo_export_eb53b65d-074a-4822-9a10-a283d465ebec.shp") 
+# Imports
+import re
+from fuzzywuzzy import process
 ```
 
 ```{python}
-crim_and_civil['District']=crim_and_civil['Agency'].map(lambda x: x.replace("U.S. Attorney's Office,", ""))
-crim_and_civil.head()
-```
-
-```{python}
-enforcement_data_by_district = df_21
-
-enforcement_data_by_district['District'] = enforcement_data_by_district['Agency'].str.extract(r'(District.*)')
-
-enforcement_data_by_district['District'] = enforcement_data_by_district['District'].str.replace("U.S. Attorney's Office,", "").str.strip()
-
-district_action_counts = enforcement_data_by_district.groupby('District').size().reset_index(name='action_count')
+df_21 = df_21  
 
 us_attorney_districts = gpd.read_file("C:\\Users\\mmmoh\\DPPS Python\\PSet\\problem-set-5-lauren-and-mohamed\\geo_export_81c28c49-d209-4fde-b0e2-70c7929ed1f0.shp")
-census_states = gpd.read_file("C:\\Users\\mmmoh\\DPPS Python\\PSet\\problem-set-5-lauren-and-mohamed\\cb_2018_us_state_500k.shp")
+```
 
-us_attorney_districts = us_attorney_districts.merge(district_action_counts, left_on='district_n', right_on='District', how='left')
+```{python}
+enforcement_data_by_district = df_21.copy()
+enforcement_data_by_district['District'] = enforcement_data_by_district['Agency'].str.extract(r'(District.*)')
+enforcement_data_by_district['District'] = enforcement_data_by_district['District'].str.replace("U.S. Attorney's Office,", "").str.strip()
 
-us_attorney_districts = us_attorney_districts.to_crs(epsg=4326)  
-us_attorney_districts_geojson = us_attorney_districts.to_json()
+def clean_district_name(name):
+    if not isinstance(name, str):
+        return 'Other'
+    name = name.lower()
+    name = re.sub(r'u\.s\. attorney\'s office,', '', name)
+    name = re.sub(r'u\.s\. department of justice and', '', name)
+    name = re.sub(r'attorney\'s office,', '', name)
+    name = re.sub(r'2021: u\.s\. attorney\'s office,', '', name)
+    name = re.sub(r'u\.s\. ', '', name)
+    name = re.sub(r'\.', '', name)
+    name = re.sub(r'june 28, 2024:', '', name)
+    name = re.sub(r'attorney general,', '', name)
+    name = re.sub(r'district\s+of\s+|district\s+', '', name)
+    name = re.sub(r'[^\w\s]', '', name)
+    name = name.replace('eastern', 'east').replace('western', 'west')
+    name = name.replace('northern', 'north').replace('southern', 'south')
+    name = name.replace('middle', 'central')
+    name = ' '.join(name.split())
+    return name
 
+enforcement_data_by_district['cleaned_district'] = enforcement_data_by_district['District'].apply(clean_district_name)
+us_attorney_districts['cleaned_district'] = us_attorney_districts['judicial_d'].apply(clean_district_name)
 
-alt_chart = alt.Chart(alt.Data(values=us_attorney_districts_geojson)).mark_geoshape().encode(
-    color=alt.Color('properties.action_count:Q', title='Enforcement Actions'),
+district_action_counts = enforcement_data_by_district.groupby('cleaned_district').size().reset_index(name='Count')
+
+def match_district(district_name, choices):
+    return process.extractOne(district_name, choices)[0]
+
+district_choices = us_attorney_districts['cleaned_district'].tolist()
+district_action_counts['matched_district'] = district_action_counts['cleaned_district'].apply(lambda x: match_district(x, district_choices))
+
+merged_district_counts = us_attorney_districts.merge(district_action_counts, 
+                                                     left_on='cleaned_district', 
+                                                     right_on='matched_district', 
+                                                     how='left')
+
+merged_district_counts['Count'] = merged_district_counts['Count'].fillna(0)
+
+merged_district_counts_geojson = merged_district_counts.to_crs(epsg=4326).__geo_interface__
+
+```
+
+```{python}
+alt_chart = alt.Chart(alt.Data(values=merged_district_counts_geojson['features'])).mark_geoshape().encode(
+    color=alt.Color('properties.Count:Q', 
+                    title='Enforcement Actions',
+                    scale=alt.Scale(domain=[0, 50])),
     tooltip=[
-        alt.Tooltip('properties.District:N', title='District'),
-        alt.Tooltip('properties.action_count:Q', title='Enforcement Actions')
+        alt.Tooltip('properties.judicial_d:N', title='District'),
+        alt.Tooltip('properties.Count:Q', title='Enforcement Actions')
     ]
 ).properties(
     width=800,
@@ -579,10 +640,17 @@ alt_chart = alt.Chart(alt.Data(values=us_attorney_districts_geojson)).mark_geosh
     title="Enforcement Actions by U.S. Attorney District"
 ).project(
     type='albersUsa'
+).configure_legend(
+    titleFontSize=14,
+    labelFontSize=12,
+    symbolSize=100,
+    orient='right'
 )
 
-alt_chart.display()
+alt_chart.show()
 
+missing_districts = set(us_attorney_districts['cleaned_district']) - set(district_action_counts['cleaned_district'])
+print(f"Missing Districts: {missing_districts}")
 ```
 
 ## Extra Credit
