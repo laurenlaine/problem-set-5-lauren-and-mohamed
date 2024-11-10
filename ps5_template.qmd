@@ -425,7 +425,7 @@ The length of the dataframe is 3020.
 ### 1. Plot the number of enforcement actions over time (PARTNER 2)
 
 ```{python}
-df_21_months=df_21_months
+df_21_months=df_21
 df_21_months['YearMonth'] = df_21_months['Date'].dt.to_period('M')
 
 # Aggregating the number of enforcement actions per month
@@ -594,7 +594,19 @@ plot_by_state
 
 ### 1. Merge zip code shapefile with population
 ```{python}
+zipcode_geo_data=gpd.read_file(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\gz_2010_us_860_00_500k.shp")
+zipcode_pop_data=pd.read_csv(r"C:\Users\laine\OneDrive\Documents\GitHub\problem-set-5-lauren-and-mohamed\DECENNIALDHC2020.P1-Data.csv")
+```
 
+```{python}
+zipcode_pop_data.head()
+zipcode_geo_data.head()
+zipcode_geo_data['Zip Name']=zipcode_geo_data['NAME'].map(lambda x: f'ZCTA5 {x}')
+```
+
+```{python}
+zipcode_merged=zipcode_pop_data.merge(zipcode_geo_data, left_on='NAME', right_on='Zip Name', how='left')
+zipcode_merged=gpd.GeoDataFrame(zipcode_merged, geometry='geometry')
 ```
 
 ### 2. Conduct spatial join

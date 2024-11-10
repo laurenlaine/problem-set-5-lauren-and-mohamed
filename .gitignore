@@ -1,3 +1,14 @@
+*.zip
+*.shp
+*.xml
+*.dbf
+*.prj
+*.shx
+
+
+# Ignore CSV files
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
